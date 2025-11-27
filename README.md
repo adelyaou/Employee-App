@@ -1,5 +1,14 @@
 # Employee Management System
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node.js](https://img.shields.io/badge/node.js-v18%2B-green.svg)
+![Vue.js](https://img.shields.io/badge/vue.js-3.5.21-4FC08D.svg)
+![Express.js](https://img.shields.io/badge/express.js-5.1.0-black.svg)
+![MySQL](https://img.shields.io/badge/mysql-8.0-00758F.svg)
+![Docker](https://img.shields.io/badge/docker-enabled-blue.svg?logo=docker)
+![Kubernetes](https://img.shields.io/badge/kubernetes-enabled-326CE5.svg?logo=kubernetes)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-Jenkins-D24939.svg?logo=jenkins)
+
 A comprehensive employee management application built with modern web technologies and containerized for Kubernetes deployment. This system provides complete CRUD functionality for employee management with secure authentication and role-based access control.
 
 ## 📋 Table of Contents
