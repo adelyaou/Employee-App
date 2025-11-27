@@ -1,0 +1,135 @@
+pipeline {
+  agent any
+
+  environment {
+    REGISTRY          = "docker.io/adelyao"
+    APP_NAME          = "employee"
+    MANIFEST_REPO     = "git.winteraccess.id/adel/Employee-manifest.git"
+    MANIFEST_CRED_ID  = "GIT_CRED_ID"
+    DOCKER_CRED_ID    = "DOCKER_CRED_ID"
+    MANIFEST_DIR      = "manifest"
+  }
+
+  stages {
+    stage('Prepare Workspace') {
+      steps {
+        cleanWs()
+        checkout scm
+      }
+    }
+
+    stage('Install yq') {
+      steps {
+        sh '''
+          if ! [ -x /usr/local/bin/yq ]; then
+            echo "Installing yq..."
+            wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+            chmod +x /usr/local/bin/yq
+          fi
+          yq --version
+        '''
+      }
+    }
+
+    stage('Build and Push Docker Images') {
+      steps {
+        script {
+          def gitBranch = env.BRANCH_NAME ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+          def tag = "${gitBranch}-build-${env.BUILD_NUMBER}"
+          echo "Building and pushing Docker images with tag: ${tag}"
+
+          withCredentials([usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            sh """
+              set -e
+              echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+
+              docker build -t ${REGISTRY}/${APP_NAME}-be:${tag} ./employee-be
+              docker push ${REGISTRY}/${APP_NAME}-be:${tag}
+
+              docker build -t ${REGISTRY}/${APP_NAME}-fe:${tag} ./employee-fe
+              docker push ${REGISTRY}/${APP_NAME}-fe:${tag}
+
+              docker logout
+            """
+          }
+
+          env.IMAGE_TAG_FINAL = tag
+        }
+      }
+    }
+
+    stage('Update and Push All Manifest Branches') {
+      steps {
+        script {
+          def envList = ["dev", "stag", "prod"]
+          def parallelStages = [:]
+
+          envList.each { overlayEnv ->
+            parallelStages[overlayEnv] = {
+              echo "Updating manifest for environment: ${overlayEnv}"
+
+              withCredentials([usernamePassword(credentialsId: env.MANIFEST_CRED_ID, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                sh """
+                  set -e
+                  rm -rf ${MANIFEST_DIR}-${overlayEnv}
+                  echo "Cloning manifest branch: ${overlayEnv}"
+                  git clone --single-branch --branch ${overlayEnv} https://\$GIT_USER:\$GIT_PASS@${MANIFEST_REPO} ${MANIFEST_DIR}-${overlayEnv} || \
+                  (git clone https://\$GIT_USER:\$GIT_PASS@${MANIFEST_REPO} ${MANIFEST_DIR}-${overlayEnv} && cd ${MANIFEST_DIR}-${overlayEnv} && git checkout -b ${overlayEnv})
+                """
+
+                dir("${MANIFEST_DIR}-${overlayEnv}") {
+                  sh """
+                    set -e
+                    echo "Cleaning overlays folder (keeping only ${overlayEnv})..."
+                    for d in overlays/*; do
+                      [ -d "\$d" ] || continue
+                      if [ "\$(basename "\$d")" != "${overlayEnv}" ]; then
+                        echo "Removing \$d"
+                        rm -rf "\$d"
+                      fi
+                    done
+
+                    echo "Updating image tags in overlays/${overlayEnv}/patch-deployment.yaml..."
+                    yq e -i '(.spec.template.spec.containers[] | select(.name == "backend") | .image) = "${REGISTRY}/${APP_NAME}-be:${env.IMAGE_TAG_FINAL}"' overlays/${overlayEnv}/patch-deployment.yaml
+                    yq e -i '(.spec.template.spec.containers[] | select(.name == "frontend") | .image) = "${REGISTRY}/${APP_NAME}-fe:${env.IMAGE_TAG_FINAL}"' overlays/${overlayEnv}/patch-deployment.yaml
+
+                    git config user.email "jenkins@automation.local"
+                    git config user.name "Jenkins CI"
+
+                    echo "Staging all changes..."
+                    git add -A
+
+                    echo "Committing changes..."
+                    git commit -m "chore(${overlayEnv}): update image tags to ${env.IMAGE_TAG_FINAL}" || echo "No changes to commit"
+
+                    echo "Pushing updates to branch ${overlayEnv}..."
+                    git push https://\$GIT_USER:\$GIT_PASS@${MANIFEST_REPO} ${overlayEnv} || echo "No push needed for ${overlayEnv}"
+                  """
+                }
+
+                echo "Finished updating branch ${overlayEnv}"
+              }
+            }
+          }
+
+          parallel parallelStages
+        }
+      }
+    }
+
+    stage('ArgoCD Sync (optional)') {
+      steps {
+        echo "If ArgoCD auto-sync is enabled, each environment will sync automatically."
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Pipeline completed successfully for all environment branches (dev, stag, prod)."
+    }
+    failure {
+      echo "Pipeline failed. Check logs for details."
+    }
+  }
+}

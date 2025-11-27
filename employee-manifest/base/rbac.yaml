@@ -1,0 +1,104 @@
+# Frontend Tier
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  # namespace: intern-workspace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: frontend-role
+  # namespace: intern-workspace
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: frontend-rolebinding
+  # namespace: intern-workspace
+subjects:
+  - kind: ServiceAccount
+    name: frontend-sa
+    # namespace: intern-workspace
+roleRef:
+  kind: Role
+  name: frontend-role
+  apiGroup: rbac.authorization.k8s.io
+
+
+# Backend Tier
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-sa
+  # namespace: intern-workspace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-role
+  # namespace: intern-workspace
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-rolebinding
+  # namespace: intern-workspace
+subjects:
+  - kind: ServiceAccount
+    name: backend-sa
+    # namespace: intern-workspace
+roleRef:
+  kind: Role
+  name: backend-role
+  apiGroup: rbac.authorization.k8s.io
+
+
+# Database Tier
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: database-sa
+  # namespace: intern-workspace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: database-role
+  # namespace: intern-workspace
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: database-rolebinding
+  # namespace: intern-workspace
+subjects:
+  - kind: ServiceAccount
+    name: database-sa
+    # namespace: intern-workspace
+roleRef:
+  kind: Role
+  name: database-role
+  apiGroup: rbac.authorization.k8s.io

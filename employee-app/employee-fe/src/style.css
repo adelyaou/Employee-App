@@ -1,0 +1,32 @@
+:root {
+  --primary: #0d47a1;
+  --accent: #0d9488;
+  --muted: #6b7280;
+  --bg-dark: #121212;
+  --text-light: #ffffff;
+}
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+.btn-primary {
+  background-color: var(--primary);
+  border: none;
+}
+.table-dark {
+  background-color: #1e1e1e;
+  color: var(--text-light);
+}
+input.form-control {
+  background-color: #1e1e1e;
+  color: var(--text-light);
+  border: 1px solid #333;
+}
+.card {
+  background-color: #1e1e1e;
+  color: var(--text-light);
+}
+.sidebar {
+  background-color: #1a1a1a;
+}

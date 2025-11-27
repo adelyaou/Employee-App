@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: employee-backend
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: LOG_LEVEL
+              value: "debug"
+          image: docker.io/adelyao/employee-be:build-28
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: employee-frontend
+          env:
+            - name: VITE_API_URL
+              value: "http://backend-service:4000"
+            - name: MODE
+              value: "development"
+          image: docker.io/adelyao/employee-fe:build-28

@@ -1,0 +1,11 @@
+resources:
+  - backend/backend-deployment.yaml
+  - backend/be-networkpolicy.yaml
+  - frontend/frontend-deployment.yaml
+  - frontend/fe-networkpolicy.yaml
+  - database/db-deployment.yaml
+  - database/db-networkpolicy.yaml
+  - networkpolicy-default.yaml
+  - configmap.yaml
+  - secret.yaml
+  - rbac.yaml
